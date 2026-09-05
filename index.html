@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koperasi Produsen Mitra Tani Berkah - Sistem Informasi Terpadu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+    <!-- Header Navigation & Tab Switcher -->
+    <header class="bg-emerald-800 text-white shadow-lg sticky top-0 z-50 border-b-4 border-amber-500">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-500 text-slate-900 font-extrabold p-2.5 rounded-xl text-xl tracking-wider shadow">
+                    MTB
+                </div>
+                <div>
+                    <h1 class="text-base md:text-lg font-bold leading-tight uppercase tracking-wide">Koperasi Produsen Mitra Tani Berkah</h1>
+                    <p id="subTitleHeader" class="text-xs text-amber-200">Dashboard Pengelolaan Data Anggota & Aktivitas Lahan</p>
+                </div>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-emerald-900/60 p-1.5 rounded-xl border border-emerald-700/50">
+                <button id="btnTab1" onclick="switchTab('dataAnggota')" class="px-3.5 py-2 rounded-lg text-xs font-semibold transition bg-amber-500 text-slate-900 shadow">
+                    👥 Data & Anggota
+                </button>
+                <button id="btnTab2" onclick="switchTab('klasifikasi')" class="px-3.5 py-2 rounded-lg text-xs font-semibold transition text-emerald-100 hover:bg-emerald-700">
+                    📍 Klasifikasi Alamat
+                </button>
+                <button id="btnTab3" onclick="switchTab('laporanLahan')" class="px-3.5 py-2 rounded-lg text-xs font-semibold transition text-emerald-100 hover:bg-emerald-700">
+                    🌱 Laporan Lahan
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- RINGKASAN STATISTIK UTAMA (Selalu Tampil) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 border-y border-r border-slate-200">
+                <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL ANGGOTA</p>
+                <h3 id="statTotalAnggota" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">0</h3>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500 border-y border-r border-slate-200">
+                <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">ANGGOTA AKTIF</p>
+                <h3 id="statAnggotaAktif" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-rose-500 border-y border-r border-slate-200">
+                <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">ANGGOTA TIDAK AKTIF</p>
+                <h3 id="statAnggotaNonAktif" class="text-2xl sm:text-3xl font-extrabold text-rose-500 mt-1">0</h3>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-500 border-y border-r border-slate-200">
+                <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL LAPORAN AKTIVITAS</p>
+                <h3 id="statTotalLaporan" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">0</h3>
+            </div>
+        </div>
+
+
+        <!-- ================= TAB 1: DATA & KELOLA ANGGOTA ================= -->
+        <div id="tabDataAnggota" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Form Tambah/Edit Anggota (Kiri) -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 h-fit">
+                    <h3 id="formTitle" class="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+                        <span>➕ Tambah Anggota Baru</span>
+                        <button id="btnBatalEdit" onclick="resetFormAnggota()" class="hidden text-xs text-rose-600 hover:underline">Batal Edit</button>
+                    </h3>
+
+                    <form id="anggotaForm" class="space-y-3.5">
+                        <input type="hidden" id="editIndex" value="-1">
+                        
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap</label>
+                            <input type="text" id="inputNama" placeholder="contoh: DENI HERDIANI" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat / Wilayah</label>
+                            <input type="text" id="inputAlamat" placeholder="contoh: Gunungcupu, Budiasih" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Luas Lahan Total</label>
+                            <input type="text" id="inputLuas" placeholder="contoh: 300 bata" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Komoditi Utama</label>
+                            <input type="text" id="inputKomoditi" placeholder="contoh: Cabe Rawit/Timun" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Status Anggota</label>
+                            <select id="inputStatus" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none" required>
+                                <option value="Aktif">Aktif</option>
+                                <option value="Tidak Aktif">Tidak Aktif</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" id="btnSubmitAnggota" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-3 rounded-lg transition shadow mt-2">
+                            Simpan Data Anggota
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Tabel Daftar Anggota Koperasi (Kanan) -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 text-base">Daftar Anggota Koperasi</h3>
+                            <span class="text-xs text-slate-500">Total: <b id="textCountTableAnggota">0</b> Orang</span>
+                        </div>
+
+                        <div class="overflow-x-auto max-h-[500px]">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="sticky top-0 bg-slate-100 text-slate-700 font-bold uppercase border-b border-slate-200 shadow-sm">
+                                    <tr>
+                                        <th class="p-3 text-center">NO</th>
+                                        <th class="p-3">NAMA</th>
+                                        <th class="p-3">ALAMAT</th>
+                                        <th class="p-3">LUAS LAHAN</th>
+                                        <th class="p-3">KOMODITI</th>
+                                        <th class="p-3 text-center">STATUS</th>
+                                        <th class="p-3 text-center">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anggotaTableBody" class="divide-y divide-slate-100">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- ================= TAB 2: KLASIFIKASI ANGGOTA BERDASARKAN ALAMAT ================= -->
+        <div id="tabKlasifikasi" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800 text-base">
+                        📍 Sebaran Anggota Berdasarkan Alamat / Wilayah
+                    </h3>
+                    <span class="text-xs text-slate-400">Otomatis dihitung dari Master Data</span>
+                </div>
+
+                <div id="klasifikasiGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= TAB 3: LAPORAN LAHAN (GOOGLE FORM) ================= -->
+        <div id="tabLaporanLahan" class="space-y-6 hidden">
+
+            <!-- Sync Bar -->
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div>
+                    <h4 class="font-bold text-slate-800 text-sm">Integrasi Database Laporan</h4>
+                    <p class="text-xs text-slate-500">Terhubung dengan Google Form & Sheet</p>
+                </div>
+                <button onclick="loadDataFromGoogleSheets()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold text-xs px-4 py-2.5 rounded-lg transition flex items-center gap-1.5 shadow">
+                    🔄 Sync Google Form
+                </button>
+            </div>
+
+            <!-- Form Laporan Aktivitas & Rekap Table -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Form Input Laporan (Kiri) -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 h-fit">
+                    <h3 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+                        <span>📝</span> Form Aktivitas Lahan Garapan
+                    </h3>
+
+                    <form id="lahanForm" class="space-y-3.5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Nama Anggota</label>
+                            <select id="lahanNama" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" required>
+                                <option value="">-- Pilih Anggota --</option>
+                                <!-- Option dropdown diisi otomatis dari master anggota -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Aktivitas Lahan</label>
+                            <select id="lahanAktivitas" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" required>
+                                <option value="Pengolahan Lahan">Pengolahan Lahan</option>
+                                <option value="Penanaman">Penanaman</option>
+                                <option value="Pemeliharaan / Pemupukan">Pemeliharaan / Pemupukan</option>
+                                <option value="Panen">Panen</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Luas Lahan Digarap</label>
+                            <input type="text" id="lahanLuas" placeholder="contoh: 200 bata / 1 Ha" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Komoditi yang Ditanam</label>
+                            <input type="text" id="lahanKomoditi" placeholder="contoh: Timun, Cabe Rawit" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Kegiatan</label>
+                            <input type="date" id="lahanTanggal" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none" required>
+                        </div>
+
+                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-3 rounded-lg transition shadow mt-2">
+                            Kirim / Laporkan Aktivitas
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Rekap Tabel Aktivitas (Kanan) -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-amber-50/50">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Rekap Aktivitas Lahan Garapan Anggota</h3>
+                                <p class="text-xs text-slate-500">Menampilkan data sinkronisasi Google Form</p>
+                            </div>
+                            <span id="statusSyncText" class="text-xs text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full font-medium">Real-Time Sync</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-amber-100/60 text-slate-700 font-bold uppercase border-b border-amber-200">
+                                        <th class="p-3">TANGGAL</th>
+                                        <th class="p-3">NAMA</th>
+                                        <th class="p-3">AKTIVITAS</th>
+                                        <th class="p-3">LUAS DIGARAP</th>
+                                        <th class="p-3">KOMODITI</th>
+                                        <th class="p-3">FOTO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody" class="divide-y divide-slate-100">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // MASTER DATA FULL DARI DOKUMEN 91 ANGGOTA
+        let masterAnggota = [
+            { nama: "DENI", alamat: "Budiasih", luas: "200 Bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "IIS RUSNIAWATI", alamat: "Sukaraja", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "EMAN SULAEMAN", alamat: "Sukaraja", luas: "100 bata", komoditi: "timun", status: "Tidak Aktif" },
+            { nama: "DEDE SURYANA", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Cabe/Timun", status: "Aktif" },
+            { nama: "MAMAN", alamat: "Sukasenang", luas: "150 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "DEDE ROHADI", alamat: "Budiasih", luas: "150 bata", komoditi: "Timun", status: "Tidak Aktif" },
+            { nama: "BUDI YANA", alamat: "Budiasih", luas: "150 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "DIDIN HERDIANSYAH", alamat: "Sindangkasih", luas: "200 bata", komoditi: "Timun/Cabe/Rawit", status: "Aktif" },
+            { nama: "DEDE ROHIMAN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun/Sawi", status: "Aktif" },
+            { nama: "NANANG SUPRIADI", alamat: "Tidak Terdata", luas: "-", komoditi: "-", status: "Tidak Aktif" },
+            { nama: "DADANG", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "WAWAN KURNIAWAN", alamat: "Sukasenang", luas: "200 bata", komoditi: "sawit", status: "Aktif" },
+            { nama: "JENI", alamat: "Sukaresik", luas: "100 bata", komoditi: "Gombas/Lopang", status: "Aktif" },
+            { nama: "DENI HERDIANI", alamat: "Tasikmalaya", luas: "300 bata", komoditi: "Cabe Rawit", status: "Aktif" },
+            { nama: "INDRA MAULANA", alamat: "Gunungcupu", luas: "300 bata", komoditi: "Cabe Rawit/Timun", status: "Aktif" },
+            { nama: "IMIN ROHIMIN", alamat: "Sukaraja", luas: "100 bata", komoditi: "Tomat/Timun", status: "Aktif" },
+            { nama: "AHMAD ROHANA", alamat: "Sukaraja", luas: "100 bata", komoditi: "Gambas/Lopang", status: "Aktif" },
+            { nama: "SAEPUDIN", alamat: "Sindangkasih", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "ENDANG SUHENDAR", alamat: "Sindangkasih", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "DINDIN", alamat: "Sukasenang", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "MAMAN SUHAMAN", alamat: "Sukasenang", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "DUDU", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Terong/Sawi", status: "Aktif" },
+            { nama: "NANA SUPRIATNA", alamat: "Sukasenang", luas: "200 bata", komoditi: "Tomat/Cabe", status: "Aktif" },
+            { nama: "SUHANA", alamat: "Gunungcupu", luas: "300 bata", komoditi: "Terong/Kacang", status: "Aktif" },
+            { nama: "YAYAN HAERUMAN", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Cabai Rawit", status: "Aktif" },
+            { nama: "SALIM", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Cabai Rawit", status: "Aktif" },
+            { nama: "DAHLAN", alamat: "Gunungcupu", luas: "-", komoditi: "Kacang/Sawi", status: "Aktif" },
+            { nama: "MUKADI", alamat: "Sukaraja", luas: "100 bata", komoditi: "Terong/Rawit", status: "Aktif" },
+            { nama: "HERI HERIADI", alamat: "Tasikmalaya", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "USUP", alamat: "Gunungcupu", luas: "200 bata", komoditi: "Terong/Sawi", status: "Aktif" },
+            { nama: "DIDI JUMADI", alamat: "Gunungcupu", luas: "700 bata", komoditi: "Timun/Paria", status: "Aktif" },
+            { nama: "BUDI MULYADI", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "ADIM", alamat: "Sukaraja", luas: "50 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "PUPUNG", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "YANI RAHMAT", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "IRFAN ABDUL AZIZ", alamat: "Panaragan", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "MAMAD", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "RUSLI", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "ODIN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "ENCEP TURMUDI", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "ENJANG WARMAN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "AHUN DARHUN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "TRI KISWANTO", alamat: "Burunggendis", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "EDI SOMANTRI", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "IWAN SUHIWA", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "FACHMI RAMDHAN", alamat: "Gunungcupu", luas: "60 bata", komoditi: "Rawit Merah", status: "Aktif" },
+            { nama: "HENDRIANTO", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "HERMAN", alamat: "Sukaresik", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "AGUS NURHAYAT", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "KOMARUDIN", alamat: "Sukaraja", luas: "150 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "BAMBANG KENHARTO", alamat: "Sindangkasih", luas: "150 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "DIAH ERASWATI", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "RUDI MULYADI", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "DIDIN MAHMUDIN", alamat: "Gunungcupu", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif" },
+            { nama: "HASANUDIN", alamat: "Sukaraja", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "AGUS (WALUNGAN)", alamat: "Sukaraja", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "SONI SONAGAR", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Kacang Panjang", status: "Aktif" },
+            { nama: "MAMAN", alamat: "Sukasenang", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "DUDI", alamat: "Nasol", luas: "100 bata", komoditi: "Timun/Kacang Panjang", status: "Aktif" },
+            { nama: "IIS ISKANDAR", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "MUHTADIN", alamat: "Sukaresik", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "DENI HERDIANA", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Tomat/Timun", status: "Aktif" },
+            { nama: "NURUL MARDIAH", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "ANDI KUSTIAWAN", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "AWALUDIN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "OHANUDIN", alamat: "Cihaurbeuti", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "YETI", alamat: "Burunggendis", luas: "400 bata", komoditi: "Rawit/Timun", status: "Aktif" },
+            { nama: "AGUS KUSNADI", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "ONDO", alamat: "Nasol", luas: "100 bata", komoditi: "Timun/Kacang Panjang", status: "Aktif" },
+            { nama: "ADIT", alamat: "Sindangkasih", luas: "50 bata", komoditi: "Timun", status: "Tidak Aktif" },
+            { nama: "NIRWAN", alamat: "Cikoneng", luas: "100 bata", komoditi: "Timun/Kacang Panjang", status: "Tidak Aktif" },
+            { nama: "ESO", alamat: "Tidak Terdata", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "YADI", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "IWAN", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "H. DAYU HILMANSYAH", alamat: "Sukasenang", luas: "100 bata", komoditi: "Rawit", status: "Aktif" },
+            { nama: "H. SAHIDIN", alamat: "Gegempalan", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "HERLI", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Kacay", status: "Aktif" },
+            { nama: "ENA SUMPENA", alamat: "Sukasenang", luas: "50 bata", komoditi: "Cabe Keriting", status: "Aktif" },
+            { nama: "YOYO", alamat: "Sukasenang", luas: "100 bata", komoditi: "Rawit", status: "Aktif" },
+            { nama: "ADE IWAN", alamat: "Budiharja", luas: "50 bata", komoditi: "Bawang Daun", status: "Aktif" },
+            { nama: "RINA HERLINA", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Rawit", status: "Aktif" },
+            { nama: "AAN", alamat: "Panaragan", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "ADE SURYANA", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "INDAH ERASWATI", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "SAEPUL MA’MUM", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif" },
+            { nama: "UJANG", alamat: "Sukasenang", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "ENCU", alamat: "Budiasih", luas: "-", komoditi: "-", status: "Aktif" },
+            { nama: "ENGKUS", alamat: "Sukasenang", luas: "100 bata", komoditi: "Terong Coel", status: "Aktif" },
+            { nama: "ALVIN", alamat: "Gunungcupu", luas: "200 bata", komoditi: "Timun/Kacang Panjang", status: "Aktif" },
+            { nama: "UJANG SALAHUDIN", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Terong", status: "Aktif" },
+            { nama: "SYAMROTUL FUAD", alamat: "Sukaresik", luas: "100 bata", komoditi: "Timun/Tomat", status: "Aktif" }
+        ];
+
+        const gscriptUrl = "https://script.google.com/macros/s/AKfycbwU16Z-gW9_6ozR9n2g6q3NOO0AgXeNVApEoCMCq2XFJz3OXb6JeNH5qBYhXqVlCpbJ/exec";
+        let localLaporan = [];
+
+        // 1. Tab Switcher
+        function switchTab(tabName) {
+            const tab1 = document.getElementById("tabDataAnggota");
+            const tab2 = document.getElementById("tabKlasifikasi");
+            const tab3 = document.getElementById("tabLaporanLahan");
+
+            const btn1 = document.getElementById("btnTab1");
+            const btn2 = document.getElementById("btnTab2");
+            const btn3 = document.getElementById("btnTab3");
+
+            const subTitle = document.getElementById("subTitleHeader");
+
+            tab1.classList.add("hidden");
+            tab2.classList.add("hidden");
+            tab3.classList.add("hidden");
+
+            const inactiveStyle = "px-3.5 py-2 rounded-lg text-xs font-semibold transition text-emerald-100 hover:bg-emerald-700";
+            const activeStyle = "px-3.5 py-2 rounded-lg text-xs font-semibold transition bg-amber-500 text-slate-900 shadow";
+
+            btn1.className = inactiveStyle;
+            btn2.className = inactiveStyle;
+            btn3.className = inactiveStyle;
+
+            if (tabName === 'dataAnggota') {
+                tab1.classList.remove("hidden");
+                btn1.className = activeStyle;
+                subTitle.innerText = "Dashboard Pengelolaan Data & Kelola Anggota Koperasi";
+            } else if (tabName === 'klasifikasi') {
+                tab2.classList.remove("hidden");
+                btn2.className = activeStyle;
+                subTitle.innerText = "Klasifikasi Data Anggota Berdasarkan Wilayah / Alamat";
+            } else if (tabName === 'laporanLahan') {
+                tab3.classList.remove("hidden");
+                btn3.className = activeStyle;
+                subTitle.innerText = "Dashboard Monitoring Laporan Aktivitas Lahan Garapan";
+            }
+        }
+
+        // 2. Render Table Master Anggota
+        function renderAnggotaTable() {
+            const tableBody = document.getElementById("anggotaTableBody");
+            const dropdownLahan = document.getElementById("lahanNama");
+            const countText = document.getElementById("textCountTableAnggota");
+
+            tableBody.innerHTML = "";
+            dropdownLahan.innerHTML = '<option value="">-- Pilih Anggota --</option>';
+
+            let totalAktif = 0;
+            let totalNonAktif = 0;
+
+            masterAnggota.forEach((item, index) => {
+                if (item.status === 'Aktif') totalAktif++;
+                else totalNonAktif++;
+
+                // Populate Dropdown Form Laporan
+                const option = document.createElement("option");
+                option.value = item.nama;
+                option.textContent = item.nama;
+                dropdownLahan.appendChild(option);
+
+                // Render Table Row
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50 transition";
+
+                const badgeStatus = item.status === 'Aktif' 
+                    ? '<span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded-full">Aktif</span>'
+                    : '<span class="px-2 py-0.5 text-[10px] font-semibold bg-rose-100 text-rose-800 rounded-full">Tidak Aktif</span>';
+
+                row.innerHTML = `
+                    <td class="p-3 text-center text-slate-400 font-medium">${index + 1}</td>
+                    <td class="p-3 font-bold text-slate-800 whitespace-nowrap">${item.nama}</td>
+                    <td class="p-3 text-slate-600">${item.alamat}</td>
+                    <td class="p-3 text-slate-600 whitespace-nowrap">${item.luas}</td>
+                    <td class="p-3 text-slate-600">${item.komoditi}</td>
+                    <td class="p-3 text-center">${badgeStatus}</td>
+                    <td class="p-3 text-center whitespace-nowrap">
+                        <button onclick="editAnggota(${index})" class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1 rounded mr-1">Edit</button>
+                        <button onclick="hapusAnggota(${index})" class="bg-rose-500 hover:bg-rose-600 text-white font-bold text-[10px] px-2.5 py-1 rounded">Hapus</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Update Header Stats
+            document.getElementById("statTotalAnggota").innerText = masterAnggota.length;
+            document.getElementById("statAnggotaAktif").innerText = totalAktif;
+            document.getElementById("statAnggotaNonAktif").innerText = totalNonAktif;
+            countText.innerText = masterAnggota.length;
+
+            renderKlasifikasiAlamat();
+        }
+
+        // 3. Form Tambah & Edit Anggota
+        document.getElementById("anggotaForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById("editIndex").value);
+
+            const dataBaru = {
+                nama: document.getElementById("inputNama").value.toUpperCase(),
+                alamat: document.getElementById("inputAlamat").value || "-",
+                luas: document.getElementById("inputLuas").value || "-",
+                komoditi: document.getElementById("inputKomoditi").value || "-",
+                status: document.getElementById("inputStatus").value
+            };
+
+            if (editIndex === -1) {
+                masterAnggota.push(dataBaru);
+            } else {
+                masterAnggota[editIndex] = dataBaru;
+            }
+
+            resetFormAnggota();
+            renderAnggotaTable();
+        });
+
+        function editAnggota(index) {
+            const item = masterAnggota[index];
+            document.getElementById("editIndex").value = index;
+            document.getElementById("inputNama").value = item.nama;
+            document.getElementById("inputAlamat").value = item.alamat;
+            document.getElementById("inputLuas").value = item.luas;
+            document.getElementById("inputKomoditi").value = item.komoditi;
+            document.getElementById("inputStatus").value = item.status;
+
+            document.getElementById("formTitle").innerHTML = `<span>✏️ Edit Data Anggota</span> <button id="btnBatalEdit" onclick="resetFormAnggota()" class="text-xs text-rose-600 hover:underline">Batal Edit</button>`;
+            document.getElementById("btnSubmitAnggota").innerText = "Update Data Anggota";
+            document.getElementById("btnSubmitAnggota").className = "w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-3 rounded-lg transition shadow mt-2";
+        }
+
+        function hapusAnggota(index) {
+            if (confirm(`Apakah Anda yakin ingin menghapus anggota "${masterAnggota[index].nama}"?`)) {
+                masterAnggota.splice(index, 1);
+                renderAnggotaTable();
+            }
+        }
+
+        function resetFormAnggota() {
+            document.getElementById("editIndex").value = "-1";
+            document.getElementById("anggotaForm").reset();
+            document.getElementById("formTitle").innerHTML = `<span>➕ Tambah Anggota Baru</span>`;
+            document.getElementById("btnSubmitAnggota").innerText = "Simpan Data Anggota";
+            document.getElementById("btnSubmitAnggota").className = "w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-3 rounded-lg transition shadow mt-2";
+        }
+
+        // 4. Render Klasifikasi Alamat Otomatis
+        function renderKlasifikasiAlamat() {
+            const grid = document.getElementById("klasifikasiGrid");
+            grid.innerHTML = "";
+
+            const counts = {};
+            masterAnggota.forEach(item => {
+                const wil = item.alamat.trim() || "Tidak Terdata";
+                counts[wil] = (counts[wil] || 0) + 1;
+            });
+
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+            sorted.forEach(([alamat, jumlah]) => {
+                const box = document.createElement("div");
+                box.className = "bg-slate-50 border border-slate-200 p-3 rounded-lg text-center hover:border-emerald-400 transition";
+                box.innerHTML = `
+                    <p class="text-xs text-slate-500 font-medium truncate">${alamat}</p>
+                    <p class="text-base font-bold text-emerald-700 mt-0.5">${jumlah} <span class="text-[10px] font-normal text-slate-400">orang</span></p>
+                `;
+                grid.appendChild(box);
+            });
+        }
+
+        // 5. Google Sheets Sync Laporan Lahan
+        async function loadDataFromGoogleSheets() {
+            const statusText = document.getElementById("statusSyncText");
+            if (statusText) statusText.innerText = "Memuat data...";
+
+            try {
+                const response = await fetch(gscriptUrl);
+                const googleData = await response.json();
+                renderLaporanTable([...localLaporan, ...googleData]);
+
+                if (statusText) statusText.innerText = "Real-Time Sync";
+            } catch (error) {
+                console.error("Gagal sync:", error);
+                if (statusText) statusText.innerText = "Offline / Local Data";
+                renderLaporanTable(localLaporan);
+            }
+        }
+
+        function renderLaporanTable(dataList) {
+            const tableBody = document.getElementById("activityTableBody");
+            const statTotalLaporan = document.getElementById("statTotalLaporan");
+
+            tableBody.innerHTML = "";
+
+            if (dataList.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-5 text-center text-slate-400 italic">Belum ada data laporan aktivitas dari anggota.</td></tr>`;
+                statTotalLaporan.innerText = "0";
+                return;
+            }
+
+            statTotalLaporan.innerText = dataList.length;
+
+            const reversedData = [...dataList].reverse();
+
+            reversedData.forEach(item => {
+                const row = document.createElement("tr");
+                row.className = "hover:bg-amber-50/40 transition";
+
+                let imgHtml = '<span class="text-slate-400 italic">Tidak ada</span>';
+                if (item.foto && item.foto.toString().includes("http")) {
+                    imgHtml = `<a href="${item.foto}" target="_blank" class="text-emerald-700 font-semibold underline hover:text-emerald-900">Lihat Foto</a>`;
+                }
+
+                let formattedDate = item.tanggal || '-';
+                if(formattedDate.includes('T')) {
+                    formattedDate = formattedDate.split('T')[0];
+                }
+
+                row.innerHTML = `
+                    <td class="p-3 text-slate-500 whitespace-nowrap">${formattedDate}</td>
+                    <td class="p-3 font-bold text-slate-800">${item.nama || '-'}</td>
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 text-[10px] font-semibold bg-amber-100 text-amber-800 rounded-md">${item.aktivitas || '-'}</span>
+                    </td>
+                    <td class="p-3 text-slate-600">${item.luas || '-'}</td>
+                    <td class="p-3 text-slate-600">${item.komoditi || '-'}</td>
+                    <td class="p-3">${imgHtml}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Form Laporan Submission
+        document.getElementById("lahanForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const newItem = {
+                tanggal: document.getElementById("lahanTanggal").value,
+                nama: document.getElementById("lahanNama").value,
+                aktivitas: document.getElementById("lahanAktivitas").value,
+                luas: document.getElementById("lahanLuas").value,
+                komoditi: document.getElementById("lahanKomoditi").value,
+                foto: null
+            };
+
+            localLaporan.push(newItem);
+            this.reset();
+            document.getElementById("lahanTanggal").valueAsDate = new Date();
+            loadDataFromGoogleSheets();
+        });
+
+        document.getElementById("lahanTanggal").valueAsDate = new Date();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            renderAnggotaTable();
+            loadDataFromGoogleSheets();
+        });
+    </script>
+</body>
+</html>
