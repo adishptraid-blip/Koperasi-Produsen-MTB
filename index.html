@@ -1534,5 +1534,42 @@
             renderKeuangan();
         });
     </script>
+    <script>
+document.addEventListener("DOMContentLoaded", function() {
+    const formAnggota = document.getElementById("formTambahAnggota");
+
+    if (formAnggota) {
+        formAnggota.addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const dataAnggota = {
+                nama: document.getElementById("nama").value,
+                alamat: document.getElementById("alamat").value,
+                luasLahan: document.getElementById("luas_lahan").value,
+                komoditi: document.getElementById("komoditi").value,
+                status: document.getElementById("status").value
+            };
+
+            const urlWebapp = "https://script.google.com/macros/s/AKfycbyWYR-cSztWv_Q2QEkhUpmtf817orFhjuf_4NxzaJXrFnDAQRmpj06ABfksYXMl3W1x/exec";
+
+            fetch(urlWebapp, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(dataAnggota)
+            })
+            .then(() => {
+                alert("Data anggota berhasil disimpan!");
+                formAnggota.reset();
+                location.reload();
+            })
+            .catch(error => {
+                console.error("Gagal:", error);
+                alert("Terjadi kesalahan saat menyimpan data.");
+            });
+        });
+    }
+});
+</script>
 </body>
 </html>
