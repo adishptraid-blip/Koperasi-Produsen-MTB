@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koperasi Produsen Mitra Tani Berkah - Sistem Informasi Terpadu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Pustaka SheetJS untuk Ekspor Excel (.xlsx) Rapi -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Leaflet JS & CSS untuk Peta Interaktif -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @media print {
+            body * { visibility: hidden; }
+            #printableArea, #printableArea *, #ktaPrintArea, #ktaPrintArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+            #ktaPrintArea { position: absolute; left: 0; top: 0; width: 100%; display: flex !important; justify-content: center; align-items: center; }
+        }
+        #map { height: 400px; z-index: 1; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased selection:bg-amber-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+        <span id="toastIcon" class="text-lg">✅</span>
+        <p id="toastMessage" class="text-xs font-semibold"></p>
+    </div>
+
+    <!-- Header Navigation & Tab Switcher -->
+    <header class="bg-slate-900/95 backdrop-blur-md text-white sticky top-0 z-40 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border border-slate-200 overflow-hidden shadow-md">
+                    <img src="Logo Koperasi.png" alt="Logo Koperasi Produsen Mitra Tani Berkah" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-base md:text-lg font-bold leading-snug tracking-tight text-white uppercase">Koperasi Produsen Mitra Tani Berkah</h1>
+                    <p id="subTitleHeader" class="text-xs text-amber-400 font-medium">Sistem Informasi Pengelolaan Koperasi & Lahan Pertanian</p>
+                </div>
+            </div>
+
+            <!-- Tab Buttons -->
+            <nav class="flex flex-wrap items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/50">
+                <button id="btnTab0" onclick="switchTab('home')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20">
+                    🏠 Home
+                </button>
+                <button id="btnTab1" onclick="switchTab('dataAnggota')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    👥 Data Anggota
+                </button>
+                <button id="btnTab2" onclick="switchTab('klasifikasi')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    📍 Wilayah & Peta
+                </button>
+                <button id="btnTab3" onclick="switchTab('laporanLahan')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    📊 Laporan Lahan
+                </button>
+                <button id="btnTab5" onclick="switchTab('keuangan')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    💰 Keuangan & HPP
+                </button>
+                <button id="btnTab4" onclick="switchTab('legalitas')" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+                    📄 Legalitas
+                </button>
+            </nav>
+
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+        <!-- RINGKASAN STATISTIK UTAMA -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Anggota</p>
+                <div class="flex items-baseline justify-between mt-2">
+                    <h3 id="statTotalAnggota" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</h3>
+                    <span class="text-xs font-medium text-slate-400">Orang</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Anggota Aktif</p>
+                <div class="flex items-baseline justify-between mt-2">
+                    <h3 id="statAnggotaAktif" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">0</h3>
+                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">Aktif</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-bold text-rose-500 uppercase tracking-wider">Tidak Aktif</p>
+                <div class="flex items-baseline justify-between mt-2">
+                    <h3 id="statAnggotaNonAktif" class="text-2xl sm:text-3xl font-extrabold text-rose-500">0</h3>
+                    <span class="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">Non-Aktif</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                <p class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Laporan Aktivitas</p>
+                <div class="flex items-baseline justify-between mt-2">
+                    <h3 id="statTotalLaporan" class="text-2xl sm:text-3xl font-extrabold text-amber-600">0</h3>
+                    <span class="text-xs font-medium text-slate-400">Kegiatan</span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= PAGE 0: HOME / PROFIL KOPERASI ================= -->
+        <div id="tabHome" class="space-y-8">
+            <div class="relative bg-gradient-to-r from-slate-950 via-stone-900 to-slate-900 rounded-3xl p-6 sm:p-10 text-white overflow-hidden shadow-xl border border-slate-800">
+                <div class="relative z-10 max-w-2xl">
+                    <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold uppercase tracking-widest rounded-full border border-amber-500/30">Profil Resmi</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight mt-3 leading-tight">Membangun Pertanian Berkelanjutan & Sejahtera</h2>
+                    <p class="text-slate-300 text-xs sm:text-sm mt-3 leading-relaxed">
+                        Koperasi Produsen Mitra Tani Berkah berkomitmen memperkuat ekonomi para petani melalui tata kelola hasil tani terpadu, penyediaan akses pendampingan, serta pemasaran komoditi berkualitas secara efisien.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center font-bold text-lg mb-4">🎯</div>
+                    <h3 class="font-bold text-slate-900 text-base">Visi Koperasi</h3>
+                    <p class="text-xs text-slate-500 mt-2 leading-relaxed">Menjadi koperasi produsen unggulan yang berdaya saing tinggi, mandiri, serta menyejahterakan seluruh petani anggota melalui kemitraan strategis.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold text-lg mb-4">🚀</div>
+                    <h3 class="font-bold text-slate-900 text-base">Misi Utama</h3>
+                    <ul class="text-xs text-slate-500 mt-2 space-y-1.5 list-disc list-inside">
+                        <li>Meningkatkan produktivitas hasil lahan petani.</li>
+                        <li>Memfasilitasi distribusi & pemasaran komoditi.</li>
+                        <li>Mengembangkan manajemen pertanian digital.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="w-10 h-10 bg-orange-100 text-orange-700 rounded-xl flex items-center justify-center font-bold text-lg mb-4">🌾</div>
+                    <h3 class="font-bold text-slate-900 text-base">Komoditi Unggulan</h3>
+                    <p class="text-xs text-slate-500 mt-2 leading-relaxed">Fokus pada pengelolaan holtikultura seperti <strong>Timun, Cabai Rawit, Terong, Kacang Panjang, dan Gambas</strong> yang tersebar di wilayah Ciamis dan sekitarnya.</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm">
+                <div class="mb-6">
+                    <h3 class="font-extrabold text-slate-900 text-lg">Struktur Pengurus Koperasi</h3>
+                    <p class="text-xs text-slate-400">Susunan kepengurusan Koperasi Produsen Mitra Tani Berkah</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center hover:border-amber-400 transition-all">
+                        <div class="w-14 h-14 bg-gradient-to-tr from-amber-600 to-orange-500 rounded-full mx-auto flex items-center justify-center text-white text-xl font-bold shadow-md shadow-amber-900/20 mb-3">👤</div>
+                        <h4 class="font-bold text-slate-800 text-xs">Ade Suryana, S.Pd.I</h4>
+                        <p class="text-[10px] font-semibold text-amber-600 uppercase tracking-wider mt-0.5">Ketua Utama</p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center hover:border-amber-400 transition-all">
+                        <div class="w-14 h-14 bg-gradient-to-tr from-slate-800 to-slate-600 rounded-full mx-auto flex items-center justify-center text-white text-xl font-bold shadow-md mb-3">📑</div>
+                        <h4 class="font-bold text-slate-800 text-xs">Adi Saputra</h4>
+                        <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Sekretaris 1</p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center hover:border-amber-400 transition-all">
+                        <div class="w-14 h-14 bg-gradient-to-tr from-slate-700 to-slate-500 rounded-full mx-auto flex items-center justify-center text-white text-xl font-bold shadow-md mb-3">📑</div>
+                        <h4 class="font-bold text-slate-800 text-xs">Adim</h4>
+                        <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Sekretaris 2</p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center hover:border-amber-400 transition-all">
+                        <div class="w-14 h-14 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full mx-auto flex items-center justify-center text-white text-xl font-bold shadow-md mb-3">💰</div>
+                        <h4 class="font-bold text-slate-800 text-xs">Indra Maulana</h4>
+                        <p class="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mt-0.5">Bendahara 1</p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center hover:border-amber-400 transition-all">
+                        <div class="w-14 h-14 bg-gradient-to-tr from-emerald-700 to-emerald-500 rounded-full mx-auto flex items-center justify-center text-white text-xl font-bold shadow-md mb-3">💰</div>
+                        <h4 class="font-bold text-slate-800 text-xs">Endah Eraswati</h4>
+                        <p class="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mt-0.5">Bendahara 2</p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-center hover:border-amber-400 transition-all">
+                        <div class="w-14 h-14 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-full mx-auto flex items-center justify-center text-white text-xl font-bold shadow-md mb-3">🛡️</div>
+                        <h4 class="font-bold text-slate-800 text-xs">Tim Pengawas</h4>
+                        <p class="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider mt-0.5">Pengawas Internal</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= TAB 1: DATA & KELOLA ANGGOTA ================= -->
+        <div id="tabDataAnggota" class="space-y-6 hidden">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Daftar Anggota Koperasi</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Total data terdaftar: <b id="textCountTableAnggota" class="text-amber-600">0</b> orang</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                        <input type="text" id="searchAnggota" oninput="renderAnggotaTable()" placeholder="🔍 Cari Nama / Alamat..." class="text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition w-full sm:w-36">
+                        
+                        <select id="filterWilayah" onchange="renderAnggotaTable()" class="text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                            <option value="Semua">Semua Wilayah</option>
+                        </select>
+
+                        <select id="filterStatus" onchange="renderAnggotaTable()" class="text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                            <option value="Semua">Semua Status</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Tidak Aktif">Tidak Aktif</option>
+                        </select>
+
+                        <select id="filterKomoditi" onchange="renderAnggotaTable()" class="text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                            <option value="Semua">Semua Komoditi</option>
+                            <option value="Timun">Timun</option>
+                            <option value="Cabe">Cabe / Rawit</option>
+                            <option value="Terong">Terong</option>
+                            <option value="Kacang">Kacang Panjang</option>
+                            <option value="Tomat">Tomat</option>
+                        </select>
+
+                        <button id="btnExportAnggota" onclick="exportAnggotaExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5">
+                            📊 Excel (.xlsx)
+                        </button>
+
+                        <button onclick="openModalAnggota()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-md shadow-amber-500/10 flex items-center gap-1.5">
+                            ➕ Tambah
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="sticky top-0 bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
+                            <tr>
+                                <th class="p-3.5 text-center">NO</th>
+                                <th class="p-3.5">NAMA</th>
+                                <th class="p-3.5">ALAMAT / LOKASI</th>
+                                <th class="p-3.5">LUAS LAHAN</th>
+                                <th class="p-3.5">KOMODITI</th>
+                                <th class="p-3.5 text-center">STATUS</th>
+                                <th class="p-3.5 text-center">AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="anggotaTableBody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= TAB 2: KLASIFIKASI ANGGOTA & PETA ================= -->
+        <div id="tabKlasifikasi" class="space-y-6 hidden">
+            <!-- PETA INTERAKTIF SEBARAN LAHAN -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">🗺️ Peta Interaktif Sebaran Lahan & Anggota</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Visualisasi titik sebaran lahan anggota Koperasi Produsen Mitra Tani Berkah</p>
+                    </div>
+                </div>
+                <div id="map" class="rounded-2xl border border-slate-200"></div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/80">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-3 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">📍 Sebaran Anggota Berdasarkan Wilayah</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Klasifikasi otomatis berdasarkan alamat anggota terdaftar</p>
+                    </div>
+                    <div>
+                        <select id="filterWilayahTabKlasifikasi" onchange="filterKlasifikasiByWilayah()" class="text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                            <option value="Semua">Semua Desa/Wilayah</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="klasifikasiGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= TAB 3: LAPORAN LAHAN ================= -->
+        <div id="tabLaporanLahan" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gradient-to-br from-emerald-800 to-teal-900 text-white p-5 rounded-3xl shadow-md border border-emerald-700">
+                    <span class="text-[10px] font-bold bg-emerald-500/30 px-2.5 py-1 rounded-full uppercase text-emerald-200">Estimasi Hasil Panen</span>
+                    <h3 id="statEstPanenKg" class="text-2xl sm:text-3xl font-extrabold mt-3">0 Kg</h3>
+                    <p class="text-xs text-emerald-100/80 mt-1">Estimasi total tonase panen dari laporan panen anggota yang masuk.</p>
+                </div>
+                <div class="bg-gradient-to-br from-amber-600 to-orange-700 text-white p-5 rounded-3xl shadow-md border border-amber-500">
+                    <span class="text-[10px] font-bold bg-amber-400/30 px-2.5 py-1 rounded-full uppercase text-amber-100">Lahan Panen Aktif</span>
+                    <h3 id="statLuasPanenBata" class="text-2xl sm:text-3xl font-extrabold mt-3">0 Bata</h3>
+                    <p class="text-xs text-amber-100/80 mt-1">Akumulasi luas tanah yang sedang/telah siap panen.</p>
+                </div>
+                <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-3xl shadow-md border border-indigo-800">
+                    <span class="text-[10px] font-bold bg-indigo-500/30 px-2.5 py-1 rounded-full uppercase text-indigo-200">Aktivitas Terbanyak</span>
+                    <h3 id="statAktivitasDominan" class="text-2xl sm:text-3xl font-extrabold mt-3">-</h3>
+                    <p class="text-xs text-slate-300 mt-1">Tahapan pengerjaan lahan yang paling dominan saat ini.</p>
+                </div>
+            </div>
+
+            <!-- KALKULATOR KONVERSI LAHAN -->
+            <div class="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 p-6 rounded-3xl shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="max-w-md">
+                    <span class="text-[10px] uppercase font-extrabold bg-slate-950 text-amber-400 px-2.5 py-1 rounded-full">Kalkulator Pertanian</span>
+                    <h4 class="font-extrabold text-base mt-2">Konversi Satuan Luas Lahan (Bata ➔ M² / Hektar)</h4>
+                    <p class="text-xs font-medium text-slate-900/80 mt-1">1 Bata lokal Jawa Barat diset setara dengan 14 Meter Persegi (m²).</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-900 mb-1">Jumlah Bata</label>
+                        <input type="number" id="calcBata" oninput="hitungKonversiLahan()" placeholder="cth: 100" class="w-28 text-xs p-2.5 font-bold rounded-xl border border-slate-900/20 focus:outline-none">
+                    </div>
+                    <div class="text-center font-extrabold text-lg pt-4">➔</div>
+                    <div class="bg-white/90 backdrop-blur p-2.5 px-4 rounded-xl border border-white/50 text-left">
+                        <span class="block text-[10px] font-bold text-slate-500 uppercase">Meter Persegi</span>
+                        <span id="resM2" class="text-sm font-extrabold text-slate-900">0 m²</span>
+                    </div>
+                    <div class="bg-white/90 backdrop-blur p-2.5 px-4 rounded-xl border border-white/50 text-left">
+                        <span class="block text-[10px] font-bold text-slate-500 uppercase">Hektar (Ha)</span>
+                        <span id="resHa" class="text-sm font-extrabold text-emerald-700">0 Ha</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div>
+                    <h4 class="font-bold text-slate-900 text-sm">Database Laporan Lahan Aktivitas</h4>
+                    <p class="text-xs text-slate-400">Sinkronisasi data otomatis dengan Google Form & Sheet</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnExportLaporan" onclick="exportLaporanExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl transition shadow-sm">
+                        📊 Export Excel (.xlsx)
+                    </button>
+                    <button onclick="loadDataFromGoogleSheets()" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm">
+                        🔄 Sync Sheet
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 h-fit">
+                    <h3 class="text-sm font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+                        <span>📝</span> Input Laporan Aktivitas
+                    </h3>
+
+                    <form id="lahanForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Pilih Nama Anggota</label>
+                            <select id="lahanNama" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                                <option value="">-- Pilih Anggota --</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jenis Aktivitas Lahan</label>
+                            <select id="lahanAktivitas" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                                <option value="Pengolahan Lahan">Pengolahan Lahan</option>
+                                <option value="Penanaman">Penanaman</option>
+                                <option value="Pemeliharaan / Pemupukan">Pemeliharaan / Pemupukan</option>
+                                <option value="Panen">Panen</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Luas Lahan Digarap</label>
+                            <input type="text" id="lahanLuas" placeholder="contoh: 200 bata / 1 Ha" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Komoditi Ditandur</label>
+                            <input type="text" id="lahanKomoditi" placeholder="contoh: Timun, Cabe Rawit" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tanggal Kegiatan</label>
+                            <input type="date" id="lahanTanggal" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                        </div>
+
+                        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-3.5 rounded-xl transition shadow-md shadow-amber-500/10 mt-2">
+                            Kirim Laporan
+                        </button>
+                    </form>
+                </div>
+
+                <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-sm">Rekap Aktivitas Garapan Anggota</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Sinkronisasi data Google Form & Sheet</p>
+                            </div>
+                            <span id="statusSyncText" class="text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded-full font-semibold border border-amber-200">Real-Time Sync</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
+                                        <th class="p-3.5">TANGGAL</th>
+                                        <th class="p-3.5">NAMA</th>
+                                        <th class="p-3.5">AKTIVITAS</th>
+                                        <th class="p-3.5">LUAS LAHAN</th>
+                                        <th class="p-3.5">KOMODITI</th>
+                                        <th class="p-3.5">FOTO</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody" class="divide-y divide-slate-100">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= FITUR BARU: TAB LAPORAN KEUANGAN & HPP ================= -->
+        <div id="tabKeuangan" class="space-y-6 hidden">
+            
+            <!-- RINGKASAN KAS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Total Kas Masuk</p>
+                    <h3 id="statKasMasuk" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-2">Rp 0</h3>
+                    <p class="text-[10px] text-slate-400 mt-1">Simpanan, penjualan komoditi, & iuran</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <p class="text-[11px] font-bold text-rose-500 uppercase tracking-wider">Total Kas Keluar</p>
+                    <h3 id="statKasKeluar" class="text-2xl sm:text-3xl font-extrabold text-rose-500 mt-2">Rp 0</h3>
+                    <p class="text-[10px] text-slate-400 mt-1">Operasional, pupuk, bibit, & alokasi</p>
+                </div>
+
+                <div class="bg-slate-900 text-white p-5 rounded-2xl shadow-md border border-slate-800">
+                    <p class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Saldo Kas Bersih</p>
+                    <h3 id="statSaldoKas" class="text-2xl sm:text-3xl font-extrabold text-amber-400 mt-2">Rp 0</h3>
+                    <p class="text-[10px] text-slate-300 mt-1">Saldo tersedia di kas Koperasi</p>
+                </div>
+            </div>
+
+            <!-- KALKULATOR HPP (HARGA POKOK PRODUKSI PER KG) -->
+            <div class="bg-gradient-to-br from-slate-900 via-stone-900 to-amber-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-amber-500/30">
+                <div class="mb-6 pb-4 border-b border-slate-800">
+                    <span class="text-[10px] uppercase font-extrabold bg-amber-500 text-slate-950 px-3 py-1 rounded-full">Simulasi HPP Pertanian</span>
+                    <h3 class="font-extrabold text-lg sm:text-xl mt-2 text-white">Kalkulator HPP & Proyeksi Keuntungan</h3>
+                    <p class="text-xs text-slate-300 mt-1">Hitung modal bersih per Kg untuk menentukan harga jual minimal agar tidak rugi.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-amber-300 mb-1">Total Biaya Bibit & Benih (Rp)</label>
+                            <input type="number" id="hppBibit" oninput="hitungHpp()" placeholder="cth: 500000" class="w-full text-xs p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-amber-400">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-amber-300 mb-1">Total Biaya Pupuk & Obat (Rp)</label>
+                            <input type="number" id="hppPupuk" oninput="hitungHpp()" placeholder="cth: 1200000" class="w-full text-xs p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-amber-400">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-amber-300 mb-1">Biaya Tenaga Kerja & Olah Lahan (Rp)</label>
+                            <input type="number" id="hppTenaga" oninput="hitungHpp()" placeholder="cth: 800000" class="w-full text-xs p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-amber-400">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-amber-300 mb-1">Estimasi Total Hasil Panen (Kg)</label>
+                            <input type="number" id="hppTotalHasil" oninput="hitungHpp()" placeholder="cth: 500" class="w-full text-xs p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-amber-400">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/80 p-6 rounded-2xl border border-amber-500/20 flex flex-col justify-between">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase text-slate-400">Hasil Perhitungan Modal</p>
+                            
+                            <div class="mt-4 space-y-3">
+                                <div>
+                                    <span class="block text-[11px] text-slate-400">Total Modal Operasional Tanam:</span>
+                                    <h4 id="hppTotalModalText" class="text-xl font-extrabold text-white">Rp 0</h4>
+                                </div>
+                                
+                                <div class="pt-3 border-t border-slate-800">
+                                    <span class="block text-[11px] text-amber-400 font-semibold">Harga Pokok Produksi (HPP) / Kg:</span>
+                                    <h3 id="hppPerKgText" class="text-2xl sm:text-3xl font-extrabold text-amber-400">Rp 0 / Kg</h3>
+                                    <p class="text-[10px] text-slate-400 mt-1">*Patokan harga jual panen minimal agar BEP/Impas.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-800 text-[11px] text-emerald-400 bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/20">
+                            💡 <strong>Tips Koperasi:</strong> Jual di atas nilai HPP untuk mendapatkan keuntungan operasional anggota!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABEL TRANSAKSI KAS & FORM INPUT -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- FORM TRANSACTION -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80 h-fit">
+                    <h3 class="text-sm font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+                        <span>➕</span> Catat Transaksi Kas
+                    </h3>
+
+                    <form id="formKeuangan" onsubmit="tambahTransaksi(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jenis Transaksi</label>
+                            <select id="keuJenis" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                                <option value="Masuk">Pemasukan (Kas Masuk)</option>
+                                <option value="Keluar">Pengeluaran (Kas Keluar)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Keterangan / Peruntukan</label>
+                            <input type="text" id="keuKet" placeholder="contoh: Penjualan Timun 200kg" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nominal (Rp)</label>
+                            <input type="number" id="keuNominal" placeholder="contoh: 1500000" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tanggal Transaksi</label>
+                            <input type="date" id="keuTanggal" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                        </div>
+
+                        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-3.5 rounded-xl transition shadow-md shadow-amber-500/10 mt-2">
+                            Simpan Transaksi
+                        </button>
+                    </form>
+                </div>
+
+                <!-- TABLE REKAP KAS -->
+                <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-sm">Riwayat Transaksi Kas Koperasi</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Catatan arus kas operasional terbaru</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[400px]">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="sticky top-0 bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
+                                <tr>
+                                    <th class="p-3.5">TANGGAL</th>
+                                    <th class="p-3.5">KETERANGAN</th>
+                                    <th class="p-3.5 text-center">JENIS</th>
+                                    <th class="p-3.5 text-right">NOMINAL (RP)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="keuanganTableBody" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ================= TAB 4: LEGALITAS & BADAN HUKUM ================= -->
+        <div id="tabLegalitas" class="space-y-6 hidden">
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200/80">
+                <div class="mb-6 pb-3 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-lg">📄 Dokumen Legalitas & Badan Hukum Koperasi</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Arsip resmi dokumen pendirian dan izin legalitas terdaftar</p>
+                    </div>
+                    <button onclick="cetakRingkasanLegalitas()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                        🖨️ Cetak Ringkasan
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-50 border border-slate-200/80 p-6 rounded-2xl flex flex-col justify-between hover:border-amber-400 transition-all">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-10 h-10 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center font-bold text-lg">📜</div>
+                                <span class="text-[10px] font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full uppercase">Dokumen Resmi</span>
+                            </div>
+                            <h4 class="font-extrabold text-slate-900 text-base">Akta Notaris Pendirian</h4>
+                            <p class="text-xs text-slate-500 mt-1">Akta pendirian resmi Koperasi Produsen Mitra Tani Berkah yang dibuat di hadapan Notaris.</p>
+                            
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-xs space-y-1.5 text-slate-600">
+                                <p><strong>Status Berkas:</strong> Fisik Tersimpan di Sekretariat</p>
+                                <p><strong>Nomor Akta:</strong> <i>AHU-0001234.AH.01.26.TAHUN 2026</i></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <a href="https://drive.google.com/file/d/13e9y6L-P21l5C-K0H3e-5yCqP7iU61N2/view?usp=sharing" target="_blank" class="w-full inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition shadow-sm">
+                                📥 Download / Lihat PDF Akta
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 border border-slate-200/80 p-6 rounded-2xl flex flex-col justify-between hover:border-amber-400 transition-all">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-10 h-10 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center font-bold text-lg">🏛️</div>
+                                <span class="text-[10px] font-bold bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full uppercase">SK Kemenkumham</span>
+                            </div>
+                            <h4 class="font-extrabold text-slate-900 text-base">SK Pengesahan Badan Hukum</h4>
+                            <p class="text-xs text-slate-500 mt-1">Surat Keputusan Menteri Hukum dan HAM atas pengesahan badan hukum koperasi.</p>
+                            
+                            <div class="mt-4 pt-3 border-t border-slate-200 text-xs space-y-1.5 text-slate-600">
+                                <p><strong>Status Berkas:</strong> Terverifikasi Pemerintah</p>
+                                <p><strong>Nomor SK:</strong> <i>AHU-0005678.AH.01.27.TAHUN 2026</i></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <a href="https://drive.google.com/file/d/1sERhQJnRTtC3KT8p64X0gdu9Aksvr_Kg/view?usp=sharing" target="_blank" class="w-full inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-3 rounded-xl transition shadow-sm">
+                                📥 Download / Lihat SK Kemenkumham
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3 text-amber-900 text-xs">
+                    <span class="text-base">🔒</span>
+                    <div>
+                        <strong class="font-bold">Informasi Keamanan Berkas:</strong>
+                        <p class="mt-0.5 text-amber-800/90">Seluruh dokumen fisik asli tersimpan rapi dalam brankas/arsip sekretariat di bawah pengawasan Sekretaris & Ketua Koperasi. Gunakan salinan digital di atas untuk keperluan administrasi umum.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+
+    <!-- Area Khusus Format Cetak PDF Ringkasan Legalitas -->
+    <div id="printableArea" class="hidden p-8">
+        <h2 class="text-2xl font-bold text-center uppercase">Koperasi Produsen Mitra Tani Berkah</h2>
+        <p class="text-center text-sm border-b pb-4 mb-6">Ringkasan Badan Hukum & Legalitas Resmi Koperasi</p>
+        <table class="w-full text-sm border-collapse border border-slate-300">
+            <tr>
+                <th class="border p-2 text-left bg-slate-100">Nama Organisasi</th>
+                <td class="border p-2">Koperasi Produsen Mitra Tani Berkah</td>
+            </tr>
+            <tr>
+                <th class="border p-2 text-left bg-slate-100">Ketua Utama</th>
+                <td class="border p-2">Ade Suryana, S.Pd.I</td>
+            </tr>
+            <tr>
+                <th class="border p-2 text-left bg-slate-100">Sekretaris</th>
+                <td class="border p-2">Adi Saputra</td>
+            </tr>
+            <tr>
+                <th class="border p-2 text-left bg-slate-100">Bendahara</th>
+                <td class="border p-2">Indra Maulana</td>
+            </tr>
+            <tr>
+                <th class="border p-2 text-left bg-slate-100">Dokumen Legalitas 1</th>
+                <td class="border p-2">Akta Notaris Pendirian Koperasi</td>
+            </tr>
+            <tr>
+                <th class="border p-2 text-left bg-slate-100">Dokumen Legalitas 2</th>
+                <td class="border p-2">SK Pengesahan Kemenkumham RI</td>
+            </tr>
+        </table>
+        <div class="mt-12 text-right">
+            <p>Dikeluarkan Oleh Tanggal: <span id="printDate"></span></p>
+            <br><br><br>
+            <p class="font-bold uppercase">Pengurus Koperasi</p>
+        </div>
+    </div>
+
+
+    <!-- ================= MODAL CETAK KARTU ANGGOTA (KTA DIGITAL) ================= -->
+    <div id="modalKta" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden p-4 transition-all">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="text-xs font-bold flex items-center gap-2">
+                    <span>🪪</span> Kartu Tanda Anggota Digital
+                </h3>
+                <button onclick="closeModalKta()" class="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition">✕</button>
+            </div>
+
+            <div class="p-6 flex flex-col items-center">
+                <div id="ktaPrintArea" class="w-full bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 text-white p-5 rounded-2xl shadow-xl border border-amber-500/30 relative overflow-hidden">
+                    <div class="flex items-center justify-between border-b border-amber-500/30 pb-3 mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 bg-white rounded-lg p-1 flex items-center justify-center">
+                                <img src="Logo Koperasi.png" alt="Logo" class="w-full h-full object-contain">
+                            </div>
+                            <div>
+                                <h4 class="text-[10px] font-extrabold uppercase text-amber-400 leading-tight">Mitra Tani Berkah</h4>
+                                <p class="text-[8px] text-slate-300">Koperasi Produsen Terdaftar</p>
+                            </div>
+                        </div>
+                        <span id="ktaBadgeStatus" class="text-[8px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">AKTIF</span>
+                    </div>
+
+                    <div class="space-y-1.5 text-xs">
+                        <p class="text-[9px] text-amber-300/80 uppercase font-semibold">ID Anggota: <span id="ktaId" class="text-white">KOP-001</span></p>
+                        <h3 id="ktaNama" class="text-base font-extrabold text-white tracking-wide">DENI HERDIANI</h3>
+                        <p id="ktaAlamat" class="text-[11px] text-slate-300 font-medium">Budiasih, Ciamis</p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-end text-[9px] text-slate-400">
+                        <div>
+                            <p>Komoditi Utama:</p>
+                            <p id="ktaKomoditi" class="text-amber-300 font-bold text-[10px]">Cabe Rawit</p>
+                        </div>
+                        <div class="text-right">
+                            <p>Luas Lahan: <b id="ktaLuas" class="text-white">300 bata</b></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 mt-6 w-full">
+                    <button onclick="closeModalKta()" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600">Tutup</button>
+                    <button id="btnCetakKta" onclick="cetakKta()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-5 py-2 rounded-xl shadow-md flex items-center gap-1.5">🖨️ Cetak KTA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= MODAL POP-UP FORM INPUT/EDIT ANGGOTA ================= -->
+    <div id="modalAnggota" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden p-4 transition-all">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <h3 id="modalFormTitle" class="text-sm font-bold flex items-center gap-2">
+                    <span>➕</span> Tambah Anggota Baru
+                </h3>
+                <button onclick="closeModalAnggota()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition">
+                    ✕
+                </button>
+            </div>
+
+            <form id="anggotaForm" class="p-6 space-y-4">
+                <input type="hidden" id="editIndex" value="-1">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Lengkap</label>
+                    <input type="text" id="inputNama" placeholder="contoh: DENI HERDIANI" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Alamat / Wilayah</label>
+                        <input type="text" id="inputAlamat" placeholder="contoh: Budiasih" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Luas Lahan Total</label>
+                        <input type="text" id="inputLuas" placeholder="contoh: 300 bata" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Link / Pin Google Maps Lahan (Opsional)</label>
+                    <input type="text" id="inputMaps" placeholder="contoh: https://maps.google.com/?q=-7.32,108.35" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Komoditi Utama</label>
+                        <input type="text" id="inputKomoditi" placeholder="contoh: Cabe Rawit/Timun" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Status Anggota</label>
+                        <select id="inputStatus" class="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none transition" required>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Tidak Aktif">Tidak Aktif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModalAnggota()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                        Batal
+                    </button>
+                    <button type="submit" id="btnSubmitAnggota" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-6 py-2.5 rounded-xl transition shadow-md shadow-amber-500/10">
+                        Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JavaScript Logic -->
+    <script>
+        // MASTER DATA FULL ANGGOTA (UTUH DAN TIDAK DIUBAH)
+        let masterAnggota = [
+            { nama: "DENI", alamat: "Budiasih", luas: "200 Bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "IIS RUSNIAWATI", alamat: "Sukaraja", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "EMAN SULAEMAN", alamat: "Sukaraja", luas: "100 bata", komoditi: "timun", status: "Tidak Aktif", maps: "" },
+            { nama: "DEDE SURYANA", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Cabe/Timun", status: "Aktif", maps: "" },
+            { nama: "MAMAN", alamat: "Sukasenang", luas: "150 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "DEDE ROHADI", alamat: "Budiasih", luas: "150 bata", komoditi: "Timun", status: "Tidak Aktif", maps: "" },
+            { nama: "BUDI YANA", alamat: "Budiasih", luas: "150 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "DIDIN HERDIANSYAH", alamat: "Sindangkasih", luas: "200 bata", komoditi: "Timun/Cabe/Rawit", status: "Aktif", maps: "" },
+            { nama: "DEDE ROHIMAN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun/Sawi", status: "Aktif", maps: "" },
+            { nama: "NANANG SUPRIADI", alamat: "Tidak Terdata", luas: "-", komoditi: "-", status: "Tidak Aktif", maps: "" },
+            { nama: "DADANG", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "WAWAN KURNIAWAN", alamat: "Sukasenang", luas: "200 bata", komoditi: "sawit", status: "Aktif", maps: "" },
+            { nama: "JENI", alamat: "Sukaresik", luas: "100 bata", komoditi: "Gombas/Lopang", status: "Aktif", maps: "" },
+            { nama: "DENI HERDIANI", alamat: "Tasikmalaya", luas: "300 bata", komoditi: "Cabe Rawit", status: "Aktif", maps: "" },
+            { nama: "INDRA MAULANA", alamat: "Gunungcupu", luas: "300 bata", komoditi: "Cabe Rawit/Timun", status: "Aktif", maps: "" },
+            { nama: "IMIN ROHIMIN", alamat: "Sukaraja", luas: "100 bata", komoditi: "Tomat/Timun", status: "Aktif", maps: "" },
+            { nama: "AHMAD ROHANA", alamat: "Sukaraja", luas: "100 bata", komoditi: "Gambas/Lopang", status: "Aktif", maps: "" },
+            { nama: "SAEPUDIN", alamat: "Sindangkasih", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "ENDANG SUHENDAR", alamat: "Sindangkasih", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "DINDIN", alamat: "Sukasenang", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "MAMAN SUHAMAN", alamat: "Sukasenang", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "DUDU", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Terong/Sawi", status: "Aktif", maps: "" },
+            { nama: "NANA SUPRIATNA", alamat: "Sukasenang", luas: "200 bata", komoditi: "Tomat/Cabe", status: "Aktif", maps: "" },
+            { nama: "SUHANA", alamat: "Gunungcupu", luas: "300 bata", komoditi: "Terong/Kacang", status: "Aktif", maps: "" },
+            { nama: "YAYAN HAERUMAN", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Cabai Rawit", status: "Aktif", maps: "" },
+            { nama: "SALIM", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Cabai Rawit", status: "Aktif", maps: "" },
+            { nama: "DAHLAN", alamat: "Gunungcupu", luas: "-", komoditi: "Kacang/Sawi", status: "Aktif", maps: "" },
+            { nama: "MUKADI", alamat: "Sukaraja", luas: "100 bata", komoditi: "Terong/Rawit", status: "Aktif", maps: "" },
+            { nama: "HERI HERIADI", alamat: "Tasikmalaya", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "USUP", alamat: "Gunungcupu", luas: "200 bata", komoditi: "Terong/Sawi", status: "Aktif", maps: "" },
+            { nama: "DIDI JUMADI", alamat: "Gunungcupu", luas: "700 bata", komoditi: "Timun/Paria", status: "Aktif", maps: "" },
+            { nama: "BUDI MULYADI", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "ADIM", alamat: "Sukaraja", luas: "50 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "PUPUNG", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "YANI RAHMAT", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "IRFAN ABDUL AZIZ", alamat: "Panaragan", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "MAMAD", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "RUSLI", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "ODIN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "ENCEP TURMUDI", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "ENJANG WARMAN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "AHUN DARHUN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "TRI KISWANTO", alamat: "Burunggendis", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "EDI SOMANTRI", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "IWAN SUHIWA", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "FACHMI RAMDHAN", alamat: "Gunungcupu", luas: "60 bata", komoditi: "Rawit Merah", status: "Aktif", maps: "" },
+            { nama: "HENDRIANTO", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "HERMAN", alamat: "Sukaresik", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "AGUS NURHAYAT", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "KOMARUDIN", alamat: "Sukaraja", luas: "150 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "BAMBANG KENHARTO", alamat: "Sindangkasih", luas: "150 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "DIAH ERASWATI", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "RUDI MULYADI", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "DIDIN MAHMUDIN", alamat: "Gunungcupu", luas: "200 bata", komoditi: "Timun/Kacang", status: "Aktif", maps: "" },
+            { nama: "HASANUDIN", alamat: "Sukaraja", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "AGUS (WALUNGAN)", alamat: "Sukaraja", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "SONI SONAGAR", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Kacang Panjang", status: "Aktif", maps: "" },
+            { nama: "MAMAN", alamat: "Sukasenang", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "DUDI", alamat: "Nasol", luas: "100 bata", komoditi: "Timun/Kacang Panjang", status: "Aktif", maps: "" },
+            { nama: "IIS ISKANDAR", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "MUHTADIN", alamat: "Sukaresik", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "DENI HERDIANA", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Tomat/Timun", status: "Aktif", maps: "" },
+            { nama: "NURUL MARDIAH", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "ANDI KUSTIAWAN", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "AWALUDIN", alamat: "Budiasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "OHANUDIN", alamat: "Cihaurbeuti", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "YETI", alamat: "Burunggendis", luas: "400 bata", komoditi: "Rawit/Timun", status: "Aktif", maps: "" },
+            { nama: "AGUS KUSNADI", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "ONDO", alamat: "Nasol", luas: "100 bata", komoditi: "Timun/Kacang Panjang", status: "Aktif", maps: "" },
+            { nama: "ADIT", alamat: "Sindangkasih", luas: "50 bata", komoditi: "Timun", status: "Tidak Aktif", maps: "" },
+            { nama: "NIRWAN", alamat: "Cikoneng", luas: "100 bata", komoditi: "Timun/Kacang Panjang", status: "Tidak Aktif", maps: "" },
+            { nama: "ESO", alamat: "Tidak Terdata", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "YADI", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "IWAN", alamat: "Sindangkasih", luas: "100 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "H. DAYU HILMANSYAH", alamat: "Sukasenang", luas: "100 bata", komoditi: "Rawit", status: "Aktif", maps: "" },
+            { nama: "H. SAHIDIN", alamat: "Gegempalan", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "HERLI", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Kacay", status: "Aktif", maps: "" },
+            { nama: "ENA SUMPENA", alamat: "Sukasenang", luas: "50 bata", komoditi: "Cabe Keriting", status: "Aktif", maps: "" },
+            { nama: "YOYO", alamat: "Sukasenang", luas: "100 bata", komoditi: "Rawit", status: "Aktif", maps: "" },
+            { nama: "ADE IWAN", alamat: "Budiharja", luas: "50 bata", komoditi: "Bawang Daun", status: "Aktif", maps: "" },
+            { nama: "RINA HERLINA", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Rawit", status: "Aktif", maps: "" },
+            { nama: "AAN", alamat: "Panaragan", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "ADE SURYANA", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "INDAH ERASWATI", alamat: "Gunungcupu", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "SAEPUL MA’MUM", alamat: "Gunungcupu", luas: "50 bata", komoditi: "Timun", status: "Aktif", maps: "" },
+            { nama: "UJANG", alamat: "Sukasenang", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "ENCU", alamat: "Budiasih", luas: "-", komoditi: "-", status: "Aktif", maps: "" },
+            { nama: "ENGKUS", alamat: "Sukasenang", luas: "100 bata", komoditi: "Terong Coel", status: "Aktif", maps: "" },
+            { nama: "ALVIN", alamat: "Gunungcupu", luas: "200 bata", komoditi: "Timun/Kacang Panjang", status: "Aktif", maps: "" },
+            { nama: "UJANG SALAHUDIN", alamat: "Gunungcupu", luas: "100 bata", komoditi: "Terong", status: "Aktif", maps: "" },
+            { nama: "SYAMROTUL FUAD", alamat: "Sukaresik", luas: "100 bata", komoditi: "Timun/Tomat", status: "Aktif", maps: "" }
+        ];
+
+        // Titik Koordinat Perkiraan untuk Wilayah Utama (Peta Leaflet)
+        const coordsWilayah = {
+            "Budiasih": [-7.3112, 108.3150],
+            "Sukaraja": [-7.3200, 108.3200],
+            "Gunungcupu": [-7.3050, 108.3300],
+            "Sukasenang": [-7.3150, 108.3350],
+            "Sindangkasih": [-7.3300, 108.2800],
+            "Sukaresik": [-7.3100, 108.3000],
+            "Tasikmalaya": [-7.3274, 108.2207],
+            "Panaragan": [-7.3000, 108.3200],
+            "Burunggendis": [-7.2950, 108.3100],
+            "Nasol": [-7.2800, 108.3300],
+            "Cihaurbeuti": [-7.2600, 108.2300],
+            "Cikoneng": [-7.3250, 108.2600],
+            "Gegempalan": [-7.3400, 108.2900],
+            "Budiharja": [-7.3350, 108.3050]
+        };
+
+        let map, mapInitialized = false;
+        let filteredAnggotaList = [...masterAnggota];
+
+        // DATA DUMMY AWAL KEUANGAN
+        let dataKeuangan = [
+            { tanggal: "2026-03-01", ket: "Simpanan Pokok Anggota Baru", jenis: "Masuk", nominal: 500000 },
+            { tanggal: "2026-03-03", ket: "Pembelian Pupuk Organik Bersama", jenis: "Keluar", nominal: 350000 }
+        ];
+
+        const gscriptUrl = "https://script.google.com/macros/s/AKfycbwU16Z-gW9_6ozR9n2g6q3NOO0AgXeNVApEoCMCq2XFJz3OXb6JeNH5qBYhXqVlCpbJ/exec";
+        let localLaporan = [];
+
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById("toast");
+            const toastMessage = document.getElementById("toastMessage");
+            const toastIcon = document.getElementById("toastIcon");
+
+            toastMessage.innerText = msg;
+            toastIcon.innerText = isSuccess ? "✅" : "⚠️";
+
+            toast.classList.remove("translate-y-20", "opacity-0", "pointer-events-none");
+            
+            setTimeout(() => {
+                toast.classList.add("translate-y-20", "opacity-0", "pointer-events-none");
+            }, 3000);
+        }
+
+        // Tab Switcher Updated
+        function switchTab(tabName) {
+            const tabHome = document.getElementById("tabHome");
+            const tab1 = document.getElementById("tabDataAnggota");
+            const tab2 = document.getElementById("tabKlasifikasi");
+            const tab3 = document.getElementById("tabLaporanLahan");
+            const tab4 = document.getElementById("tabLegalitas");
+            const tab5 = document.getElementById("tabKeuangan");
+
+            const btn0 = document.getElementById("btnTab0");
+            const btn1 = document.getElementById("btnTab1");
+            const btn2 = document.getElementById("btnTab2");
+            const btn3 = document.getElementById("btnTab3");
+            const btn4 = document.getElementById("btnTab4");
+            const btn5 = document.getElementById("btnTab5");
+
+            const subTitle = document.getElementById("subTitleHeader");
+
+            [tabHome, tab1, tab2, tab3, tab4, tab5].forEach(t => t.classList.add("hidden"));
+
+            const inactiveStyle = "px-3.5 py-2 rounded-xl text-xs font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-700/50";
+            const activeStyle = "px-3.5 py-2 rounded-xl text-xs font-semibold transition-all bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20";
+
+            [btn0, btn1, btn2, btn3, btn4, btn5].forEach(b => b.className = inactiveStyle);
+
+            if (tabName === 'home') {
+                tabHome.classList.remove("hidden");
+                btn0.className = activeStyle;
+                subTitle.innerText = "Sistem Informasi Pengelolaan Koperasi & Lahan Pertanian";
+            } else if (tabName === 'dataAnggota') {
+                tab1.classList.remove("hidden");
+                btn1.className = activeStyle;
+                subTitle.innerText = "Dashboard Pengelolaan Data & Kelola Anggota Koperasi";
+            } else if (tabName === 'klasifikasi') {
+                tab2.classList.remove("hidden");
+                btn2.className = activeStyle;
+                subTitle.innerText = "Klasifikasi Data Anggota & Peta Sebaran Wilayah";
+                initMap();
+            } else if (tabName === 'laporanLahan') {
+                tab3.classList.remove("hidden");
+                btn3.className = activeStyle;
+                subTitle.innerText = "Dashboard Monitoring Laporan Aktivitas Lahan Garapan";
+            } else if (tabName === 'keuangan') {
+                tab5.classList.remove("hidden");
+                btn5.className = activeStyle;
+                subTitle.innerText = "Pencatatan Kas Koperasi & Simulasi HPP Produksi Pertanian";
+                renderKeuangan();
+            } else if (tabName === 'legalitas') {
+                tab4.classList.remove("hidden");
+                btn4.className = activeStyle;
+                subTitle.innerText = "Arsip Legalitas, Akta Notaris, & SK Pengesahan Badan Hukum";
+            }
+        }
+
+        // Populate Wilayah Filter
+        function populateWilayahDropdowns() {
+            const dropdown1 = document.getElementById("filterWilayah");
+            const dropdown2 = document.getElementById("filterWilayahTabKlasifikasi");
+            
+            const listWilayah = [...new Set(masterAnggota.map(a => a.alamat.trim()))].sort();
+            
+            listWilayah.forEach(wil => {
+                if (wil && wil !== "Tidak Terdata") {
+                    const opt1 = document.createElement("option");
+                    opt1.value = wil;
+                    opt1.textContent = wil;
+                    dropdown1.appendChild(opt1);
+
+                    const opt2 = document.createElement("option");
+                    opt2.value = wil;
+                    opt2.textContent = wil;
+                    dropdown2.appendChild(opt2);
+                }
+            });
+        }
+
+        // Initialize Map Leaflet.js
+        function initMap() {
+            if (mapInitialized) {
+                setTimeout(() => { map.invalidateSize(); }, 200);
+                return;
+            }
+
+            // Centralized on Ciamis
+            map = L.map('map').setView([-7.3200, 108.3150], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const counts = {};
+            masterAnggota.forEach(item => {
+                const wil = item.alamat.trim();
+                counts[wil] = (counts[wil] || 0) + 1;
+            });
+
+            for (const [wil, count] of Object.entries(counts)) {
+                if (coordsWilayah[wil]) {
+                    L.marker(coordsWilayah[wil]).addTo(map)
+                        .bindPopup(`<b>Wilayah: ${wil}</b><br>Jumlah Anggota: ${count} Orang`);
+                }
+            }
+
+            mapInitialized = true;
+        }
+
+        // Render Data Anggota
+        function renderAnggotaTable() {
+            const tableBody = document.getElementById("anggotaTableBody");
+            const dropdownLahan = document.getElementById("lahanNama");
+            const countText = document.getElementById("textCountTableAnggota");
+
+            const query = (document.getElementById("searchAnggota")?.value || "").toLowerCase();
+            const filterWilayah = document.getElementById("filterWilayah")?.value || "Semua";
+            const filterStatus = document.getElementById("filterStatus")?.value || "Semua";
+            const filterKomoditi = document.getElementById("filterKomoditi")?.value || "Semua";
+
+            tableBody.innerHTML = "";
+            dropdownLahan.innerHTML = '<option value="">-- Pilih Anggota --</option>';
+
+            let totalAktif = 0;
+            let totalNonAktif = 0;
+            filteredAnggotaList = [];
+
+            masterAnggota.forEach((item, index) => {
+                if (item.status === 'Aktif') totalAktif++;
+                else totalNonAktif++;
+
+                const option = document.createElement("option");
+                option.value = item.nama;
+                option.textContent = item.nama;
+                dropdownLahan.appendChild(option);
+
+                const matchesQuery = item.nama.toLowerCase().includes(query) || item.alamat.toLowerCase().includes(query);
+                const matchesWilayah = filterWilayah === "Semua" || item.alamat.trim() === filterWilayah;
+                const matchesStatus = filterStatus === "Semua" || item.status === filterStatus;
+                const matchesKomoditi = filterKomoditi === "Semua" || item.komoditi.toLowerCase().includes(filterKomoditi.toLowerCase());
+
+                if (matchesQuery && matchesWilayah && matchesStatus && matchesKomoditi) {
+                    filteredAnggotaList.push(item);
+                    const row = document.createElement("tr");
+                    row.className = "hover:bg-slate-50/80 transition-all";
+
+                    const badgeStatus = item.status === 'Aktif' 
+                        ? '<span class="px-2.5 py-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">Aktif</span>'
+                        : '<span class="px-2.5 py-1 text-[10px] font-semibold bg-rose-50 text-rose-600 rounded-full border border-rose-200">Tidak Aktif</span>';
+
+                    const mapsBtn = item.maps 
+                        ? `<a href="${item.maps}" target="_blank" class="text-amber-600 font-bold hover:underline block text-[10px] mt-0.5">📍 Pin Maps</a>`
+                        : `<a href="https://www.google.com/maps/search/${encodeURIComponent(item.alamat + ' Ciamis')}" target="_blank" class="text-slate-400 hover:text-amber-600 block text-[10px] mt-0.5">🗺️ Cek Lokasi</a>`;
+
+                    row.innerHTML = `
+                        <td class="p-3.5 text-center text-slate-400 font-medium">${filteredAnggotaList.length}</td>
+                        <td class="p-3.5 font-bold text-slate-800 whitespace-nowrap">${item.nama}</td>
+                        <td class="p-3.5 text-slate-600">
+                            <div>${item.alamat}</div>
+                            ${mapsBtn}
+                        </td>
+                        <td class="p-3.5 text-slate-600 whitespace-nowrap">${item.luas}</td>
+                        <td class="p-3.5 text-slate-600">${item.komoditi}</td>
+                        <td class="p-3.5 text-center">${badgeStatus}</td>
+                        <td class="p-3.5 text-center whitespace-nowrap">
+                            <button onclick="previewKta(${index})" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] px-2 py-1 rounded-lg transition mr-1 shadow-sm">🪪 KTA</button>
+                            <button onclick="editAnggota(${index})" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[10px] px-2 py-1 rounded-lg transition mr-1 shadow-sm">Edit</button>
+                            <button onclick="hapusAnggota(${index})" class="bg-rose-500 hover:bg-rose-600 text-white font-bold text-[10px] px-2 py-1 rounded-lg transition shadow-sm">Hapus</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
+
+            document.getElementById("statTotalAnggota").innerText = masterAnggota.length;
+            document.getElementById("statAnggotaAktif").innerText = totalAktif;
+            document.getElementById("statAnggotaNonAktif").innerText = totalNonAktif;
+            countText.innerText = filteredAnggotaList.length;
+
+            renderKlasifikasiAlamat();
+        }
+
+        // Preview & Cetak KTA
+        function previewKta(index) {
+            const item = masterAnggota[index];
+            document.getElementById("ktaId").innerText = `KOP-00${index + 1}`;
+            document.getElementById("ktaNama").innerText = item.nama;
+            document.getElementById("ktaAlamat").innerText = item.alamat + ", Ciamis";
+            document.getElementById("ktaKomoditi").innerText = item.komoditi;
+            document.getElementById("ktaLuas").innerText = item.luas;
+
+            const badge = document.getElementById("ktaBadgeStatus");
+            if (item.status === "Aktif") {
+                badge.innerText = "AKTIF";
+                badge.className = "text-[8px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+            } else {
+                badge.innerText = "TIDAK AKTIF";
+                badge.className = "text-[8px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30";
+            }
+
+            document.getElementById("modalKta").classList.remove("hidden");
+        }
+
+        function cetakKta() {
+            showToast("Menyiapkan pencetakan KTA...");
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+
+        function closeModalKta() {
+            document.getElementById("modalKta").classList.add("hidden");
+        }
+
+        function openModalAnggota() {
+            resetFormAnggota();
+            document.getElementById("modalAnggota").classList.remove("hidden");
+        }
+
+        function closeModalAnggota() {
+            document.getElementById("modalAnggota").classList.add("hidden");
+            resetFormAnggota();
+        }
+
+        document.getElementById("anggotaForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById("editIndex").value);
+
+            const dataBaru = {
+                nama: document.getElementById("inputNama").value.toUpperCase(),
+                alamat: document.getElementById("inputAlamat").value || "-",
+                luas: document.getElementById("inputLuas").value || "-",
+                komoditi: document.getElementById("inputKomoditi").value || "-",
+                status: document.getElementById("inputStatus").value,
+                maps: document.getElementById("inputMaps").value || ""
+            };
+
+            if (editIndex === -1) {
+                masterAnggota.push(dataBaru);
+                showToast("Berhasil menambah anggota baru!");
+            } else {
+                masterAnggota[editIndex] = dataBaru;
+                showToast("Data anggota berhasil diperbarui!");
+            }
+
+            closeModalAnggota();
+            renderAnggotaTable();
+        });
+
+        function editAnggota(index) {
+            const item = masterAnggota[index];
+            document.getElementById("editIndex").value = index;
+            document.getElementById("inputNama").value = item.nama;
+            document.getElementById("inputAlamat").value = item.alamat;
+            document.getElementById("inputLuas").value = item.luas;
+            document.getElementById("inputKomoditi").value = item.komoditi;
+            document.getElementById("inputStatus").value = item.status;
+            document.getElementById("inputMaps").value = item.maps || "";
+
+            document.getElementById("modalFormTitle").innerHTML = `<span>✏️</span> Edit Data Anggota`;
+            document.getElementById("btnSubmitAnggota").innerText = "Update Data";
+
+            document.getElementById("modalAnggota").classList.remove("hidden");
+        }
+
+        function hapusAnggota(index) {
+            if (confirm(`Apakah Anda yakin ingin menghapus anggota "${masterAnggota[index].nama}"?`)) {
+                masterAnggota.splice(index, 1);
+                showToast("Anggota telah dihapus", false);
+                renderAnggotaTable();
+            }
+        }
+
+        function resetFormAnggota() {
+            document.getElementById("editIndex").value = "-1";
+            document.getElementById("anggotaForm").reset();
+            document.getElementById("modalFormTitle").innerHTML = `<span>➕</span> Tambah Anggota Baru`;
+            document.getElementById("btnSubmitAnggota").innerText = "Simpan Data";
+        }
+
+        function filterKlasifikasiByWilayah() {
+            renderKlasifikasiAlamat();
+        }
+
+        function renderKlasifikasiAlamat() {
+            const grid = document.getElementById("klasifikasiGrid");
+            const filterWil = document.getElementById("filterWilayahTabKlasifikasi")?.value || "Semua";
+
+            grid.innerHTML = "";
+
+            const counts = {};
+            masterAnggota.forEach(item => {
+                const wil = item.alamat.trim() || "Tidak Terdata";
+                if (filterWil === "Semua" || wil === filterWil) {
+                    counts[wil] = (counts[wil] || 0) + 1;
+                }
+            });
+
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+            sorted.forEach(([alamat, jumlah]) => {
+                const box = document.createElement("div");
+                box.className = "bg-slate-50 border border-slate-200/80 p-4 rounded-2xl text-center hover:border-amber-400 transition-all";
+                box.innerHTML = `
+                    <p class="text-xs text-slate-500 font-medium truncate">${alamat}</p>
+                    <p class="text-lg font-extrabold text-amber-600 mt-1">${jumlah} <span class="text-[10px] font-normal text-slate-400">orang</span></p>
+                `;
+                grid.appendChild(box);
+            });
+        }
+
+        function hitungKonversiLahan() {
+            const bata = parseFloat(document.getElementById("calcBata").value) || 0;
+            const m2 = bata * 14;
+            const ha = m2 / 10000;
+
+            document.getElementById("resM2").innerText = m2.toLocaleString("id-ID") + " m²";
+            document.getElementById("resHa").innerText = ha.toFixed(3) + " Ha";
+        }
+
+        // FUNGSI UNTUK LAPORAN KEUANGAN & KALKULATOR HPP
+        function renderKeuangan() {
+            const tbody = document.getElementById("keuanganTableBody");
+            tbody.innerHTML = "";
+
+            let totalMasuk = 0;
+            let totalKeluar = 0;
+
+            dataKeuangan.forEach(item => {
+                if (item.jenis === "Masuk") totalMasuk += item.nominal;
+                else totalKeluar += item.nominal;
+
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50/80 transition-all";
+                
+                const badgeJenis = item.jenis === "Masuk"
+                    ? '<span class="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">Masuk</span>'
+                    : '<span class="px-2.5 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-600 rounded-full border border-rose-200">Keluar</span>';
+
+                row.innerHTML = `
+                    <td class="p-3.5 text-slate-500">${item.tanggal}</td>
+                    <td class="p-3.5 font-semibold text-slate-800">${item.ket}</td>
+                    <td class="p-3.5 text-center">${badgeJenis}</td>
+                    <td class="p-3.5 text-right font-bold ${item.jenis === 'Masuk' ? 'text-emerald-600' : 'text-rose-600'}">
+                        Rp ${item.nominal.toLocaleString("id-ID")}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            const saldo = totalMasuk - totalKeluar;
+
+            document.getElementById("statKasMasuk").innerText = "Rp " + totalMasuk.toLocaleString("id-ID");
+            document.getElementById("statKasKeluar").innerText = "Rp " + totalKeluar.toLocaleString("id-ID");
+            document.getElementById("statSaldoKas").innerText = "Rp " + saldo.toLocaleString("id-ID");
+        }
+
+        function tambahTransaksi(e) {
+            e.preventDefault();
+            const jenis = document.getElementById("keuJenis").value;
+            const ket = document.getElementById("keuKet").value;
+            const nominal = parseFloat(document.getElementById("keuNominal").value) || 0;
+            const tanggal = document.getElementById("keuTanggal").value;
+
+            dataKeuangan.push({ tanggal, ket, jenis, nominal });
+            showToast("Transaksi kas berhasil ditambahkan!");
+            document.getElementById("formKeuangan").reset();
+            document.getElementById("keuTanggal").valueAsDate = new Date();
+            renderKeuangan();
+        }
+
+        function hitungHpp() {
+            const bibit = parseFloat(document.getElementById("hppBibit").value) || 0;
+            const pupuk = parseFloat(document.getElementById("hppPupuk").value) || 0;
+            const tenaga = parseFloat(document.getElementById("hppTenaga").value) || 0;
+            const hasilKg = parseFloat(document.getElementById("hppTotalHasil").value) || 0;
+
+            const totalModal = bibit + pupuk + tenaga;
+            const hppPerKg = hasilKg > 0 ? (totalModal / hasilKg) : 0;
+
+            document.getElementById("hppTotalModalText").innerText = "Rp " + totalModal.toLocaleString("id-ID");
+            document.getElementById("hppPerKgText").innerText = "Rp " + Math.round(hppPerKg).toLocaleString("id-ID") + " / Kg";
+        }
+
+        async function loadDataFromGoogleSheets() {
+            const statusText = document.getElementById("statusSyncText");
+            if (statusText) statusText.innerText = "Memuat data...";
+
+            try {
+                const response = await fetch(gscriptUrl);
+                const googleData = await response.json();
+                const combinedData = [...localLaporan, ...googleData];
+                renderLaporanTable(combinedData);
+                kalkulasiEstimasiPanen(combinedData);
+
+                if (statusText) statusText.innerText = "Real-Time Sync";
+            } catch (error) {
+                console.error("Gagal sync:", error);
+                if (statusText) statusText.innerText = "Offline / Local Data";
+                renderLaporanTable(localLaporan);
+                kalkulasiEstimasiPanen(localLaporan);
+            }
+        }
+
+        function kalkulasiEstimasiPanen(dataList) {
+            let totalBataPanen = 0;
+            let countPanen = 0;
+            const countAktivitas = {};
+
+            dataList.forEach(item => {
+                const akt = item.aktivitas || "Lainnya";
+                countAktivitas[akt] = (countAktivitas[akt] || 0) + 1;
+
+                if (akt === "Panen") {
+                    countPanen++;
+                    const angkaLuas = parseInt(item.luas) || 100;
+                    totalBataPanen += angkaLuas;
+                }
+            });
+
+            const estimasiKg = totalBataPanen * 18;
+
+            document.getElementById("statEstPanenKg").innerText = estimasiKg.toLocaleString("id-ID") + " Kg";
+            document.getElementById("statLuasPanenBata").innerText = totalBataPanen.toLocaleString("id-ID") + " Bata";
+
+            let dominanAkt = "-";
+            let maxCount = 0;
+            for (const [k, v] of Object.entries(countAktivitas)) {
+                if (v > maxCount) {
+                    maxCount = v;
+                    dominanAkt = k;
+                }
+            }
+            document.getElementById("statAktivitasDominan").innerText = dominanAkt;
+        }
+
+        function renderLaporanTable(dataList) {
+            const tableBody = document.getElementById("activityTableBody");
+            const statTotalLaporan = document.getElementById("statTotalLaporan");
+
+            tableBody.innerHTML = "";
+
+            if (dataList.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Belum ada data laporan aktivitas dari anggota.</td></tr>`;
+                statTotalLaporan.innerText = "0";
+                return;
+            }
+
+            statTotalLaporan.innerText = dataList.length;
+
+            const reversedData = [...dataList].reverse();
+
+            reversedData.forEach(item => {
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50/80 transition-all";
+
+                let imgHtml = '<span class="text-slate-400 italic">Tidak ada</span>';
+                if (item.foto && item.foto.toString().includes("http")) {
+                    imgHtml = `<a href="${item.foto}" target="_blank" class="text-amber-600 font-semibold underline hover:text-amber-800">Lihat Foto</a>`;
+                }
+
+                let formattedDate = item.tanggal || '-';
+                if(formattedDate.includes('T')) {
+                    formattedDate = formattedDate.split('T')[0];
+                }
+
+                row.innerHTML = `
+                    <td class="p-3.5 text-slate-500 whitespace-nowrap">${formattedDate}</td>
+                    <td class="p-3.5 font-bold text-slate-800">${item.nama || '-'}</td>
+                    <td class="p-3.5">
+                        <span class="px-2.5 py-1 text-[10px] font-semibold bg-amber-50 text-amber-800 rounded-lg border border-amber-200">${item.aktivitas || '-'}</span>
+                    </td>
+                    <td class="p-3.5 text-slate-600">${item.luas || '-'}</td>
+                    <td class="p-3.5 text-slate-600">${item.komoditi || '-'}</td>
+                    <td class="p-3.5">${imgHtml}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        document.getElementById("lahanForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const newItem = {
+                tanggal: document.getElementById("lahanTanggal").value,
+                nama: document.getElementById("lahanNama").value,
+                aktivitas: document.getElementById("lahanAktivitas").value,
+                luas: document.getElementById("lahanLuas").value,
+                komoditi: document.getElementById("lahanKomoditi").value,
+                foto: null
+            };
+
+            localLaporan.push(newItem);
+            showToast("Laporan aktivitas berhasil dikirim!");
+            this.reset();
+            document.getElementById("lahanTanggal").valueAsDate = new Date();
+            loadDataFromGoogleSheets();
+        });
+
+        // FUNGSI EKSPOR EXCEL (.XLSX) MENGGUNAKAN SHEETJS (RAPI & TERFORMAT)
+        function exportAnggotaExcel() {
+            const btn = document.getElementById("btnExportAnggota");
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳ Mengunduh...";
+            btn.disabled = true;
+
+            showToast("Menyiapkan berkas Excel Anggota...");
+
+            setTimeout(() => {
+                const targetData = filteredAnggotaList.length > 0 ? filteredAnggotaList : masterAnggota;
+                
+                // Mapping data ke format array objek untuk Excel
+                const dataExcel = targetData.map((item, index) => ({
+                    "NO": index + 1,
+                    "NAMA": item.nama || "",
+                    "ALAMAT": item.alamat || "",
+                    "LUAS LAHAN": item.luas || "",
+                    "KOMODITI": item.komoditi || "",
+                    "STATUS": item.status || ""
+                }));
+
+                // Membuat worksheet baru
+                const worksheet = XLSX.utils.json_to_sheet(dataExcel);
+
+                // Pengaturan Lebar Kolom Otomatis (Autofit)
+                worksheet['!cols'] = [
+                    { wch: 6 },   // NO
+                    { wch: 25 },  // NAMA
+                    { wch: 20 },  // ALAMAT
+                    { wch: 15 },  // LUAS LAHAN
+                    { wch: 22 },  // KOMODITI
+                    { wch: 12 }   // STATUS
+                ];
+
+                // Membuat workbook dan memasukkan worksheet
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Data Anggota");
+
+                // Mengunduh file Excel (.xlsx)
+                XLSX.writeFile(workbook, "Data_Anggota_Koperasi.xlsx");
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast(`Berhasil mengunduh ${targetData.length} data Anggota (.xlsx)`);
+            }, 500);
+        }
+
+        function exportLaporanExcel() {
+            const btn = document.getElementById("btnExportLaporan");
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳ Mengunduh...";
+            btn.disabled = true;
+
+            showToast("Menyiapkan berkas Excel Laporan...");
+
+            setTimeout(() => {
+                const dataExcel = localLaporan.map((item, index) => ({
+                    "NO": index + 1,
+                    "TANGGAL": item.tanggal || '',
+                    "NAMA ANGGOTA": item.nama || '',
+                    "AKTIVITAS": item.aktivitas || '',
+                    "LUAS LAHAN": item.luas || '',
+                    "KOMODITI": item.komoditi || ''
+                }));
+
+                const worksheet = XLSX.utils.json_to_sheet(dataExcel);
+
+                worksheet['!cols'] = [
+                    { wch: 6 },
+                    { wch: 14 },
+                    { wch: 25 },
+                    { wch: 22 },
+                    { wch: 15 },
+                    { wch: 20 }
+                ];
+
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Lahan");
+
+                XLSX.writeFile(workbook, "Laporan_Aktivitas_Lahan.xlsx");
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast("Data Laporan berhasil diunduh (.xlsx)");
+            }, 500);
+        }
+
+        function cetakRingkasanLegalitas() {
+            showToast("Menyiapkan dokumen ringkasan untuk dicetak...");
+            document.getElementById("printDate").innerText = new Date().toLocaleDateString("id-ID");
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+
+        document.getElementById("lahanTanggal").valueAsDate = new Date();
+        document.getElementById("keuTanggal").valueAsDate = new Date();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateWilayahDropdowns();
+            renderAnggotaTable();
+            loadDataFromGoogleSheets();
+            renderKeuangan();
+        });
+    </script>
+</body>
+</html>
