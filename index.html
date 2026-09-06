@@ -1535,55 +1535,6 @@
         });
         document.getElementById("formTambahAnggota").addEventListener("submit", function(e) {
     e.preventDefault();
-
-    // Sesuaikan ID elemen HTML form Anda di bawah ini
-    var formData = {
-        no: document.getElementById("no").value,
-        nama: document.getElementById("nama").value,
-        alamat/lokasi: document.getElementById("alamat/lokasi").value,
-        luas lahan: document.getElementById("luas lahan").value,
-        status: document.getElementById("status").value
-    };
-document.addEventListener("DOMContentLoaded", function() {
-    const formAnggota = document.getElementById("formTambahAnggota"); // Sesuaikan ID form di HTML
-
-    if (formAnggota) {
-        formAnggota.addEventListener("submit", function(e) {
-            e.preventDefault();
-
-            // Ambil data dari form HTML. Pastikan ID (di dalam kurung kutip) sama dengan ID input di HTML Anda
-            const dataAnggota = {
-                nama: document.getElementById("nama").value,             
-                alamat: document.getElementById("alamat").value,         
-                luasLahan: document.getElementById("luas_lahan").value,  // Tambahan baru
-                komoditi: document.getElementById("komoditi").value,     // Tambahan baru
-                status: document.getElementById("status").value          
-            };
-
-            // URL Web App dari Google Script Anda
-            const urlWebapp = "https://script.google.com/macros/s/AKfycbxBQ3vvaRI5G9_UjdDursFofRW48JwLQnlLgS_iKUQ3GAXxfm-br9uKtUUUJccDQ5RX/exec";
-
-            const btnSubmit = formAnggota.querySelector("button[type='submit']");
-            if(btnSubmit) btnSubmit.innerText = "Menyimpan...";
-
-            fetch(urlWebapp, {
-                method: "POST",
-                mode: "no-cors",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(dataAnggota)
-            })
-            .then(() => {
-                alert("Data anggota Koperasi MTB berhasil disimpan!");
-                formAnggota.reset();
-                location.reload(); 
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("Terjadi kesalahan saat menyimpan data.");
-                if(btnSubmit) btnSubmit.innerText = "Simpan";
-            });
         });
     </script>
 </body>
