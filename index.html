@@ -1533,6 +1533,38 @@
             loadDataFromGoogleSheets();
             renderKeuangan();
         });
+        document.getElementById("formTambahAnggota").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    // Sesuaikan ID elemen HTML form Anda di bawah ini
+    var formData = {
+        no: document.getElementById("no").value,
+        nama: document.getElementById("nama").value,
+        alamat/lokasi: document.getElementById("alamat/lokasi").value,
+        luas lahan: document.getElementById("luas lahan").value,
+        status: document.getElementById("status").value
+    };
+
+    // URL Web App Google Script Anda
+    var urlScript = "https://script.google.com/macros/s/AKfycbzjjdeDyI6fO-ZEofIDzIZenUcyCB0j44VIbEq7rMZQO7OwccDumuh9HY_l90zzUF5Q/exec";
+
+    fetch(urlScript, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => {
+        alert("Anggota baru berhasil disimpan!");
+        location.reload(); // Refresh halaman otomatis
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Gagal menyimpan data.");
+    });
+});
     </script>
 </body>
 </html>
